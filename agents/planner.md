@@ -47,7 +47,9 @@ Write the plan from the agreed requirements (never from memory of the ask):
 - **Files to touch** and the **behaviour change per file**.
 - **Test cases** — a required heading: the cases that prove each acceptance
   criterion, with **expected results worked out from the requirements, never from
-  what the code would return**. Per slice if the task was split.
+  what the code would return**. Per slice if the task was split. Flag the obvious
+  **automation candidates** (regression-worthy, deterministic) vs one-off manual
+  checks — the verifier firms this up into an automate/manual call per case.
 - **Out of scope** — what you deliberately won't do.
 - **Contract before code** — if the change adds or alters an API, agree the
   request/response shape HERE, before implementation and before any UI is built

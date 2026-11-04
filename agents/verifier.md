@@ -43,14 +43,24 @@ the matrix into the plan file; step 5b then executes every row and you mark it.
 
 Apply only the techniques that fit the change — a pure-display tweak needs no state or
 decision rows; don't manufacture them. Each row is: **inputs / preconditions →
-expected result (from the requirements) → technique**. Keep it the smallest matrix
-that covers the criteria.
+expected result (from the requirements) → technique → automate?**. Keep it the
+smallest matrix that covers the criteria.
 
 **Then execute and mark.** Run every matrix row in step 5b and mark each **PASS /
 FAIL** against its expected result. Any **FAIL** — or a row the executor's tests don't
 actually exercise — is a finding back to the `executor` through the `## Fix attempts`
 loop (below). A matrix where every row is green, with no uncovered criterion, is the
 bar for "verified".
+
+**Recommend what to automate.** Mark each row **automate** or **manual**. *Automate*
+the cases worth a permanent regression test — deterministic, repeatable, cheap in CI,
+and guarding logic that can regress: the boundary cases, the decision-table rows, the
+core state transitions. Leave as *manual/exploratory* the ones that don't earn a
+standing test — a one-off data/migration check, subjective visual nuance, a throwaway
+setup — automating those is cost with no payback. Then compare against what the
+executor actually automated: every **automate** row the suite doesn't yet cover is a
+recommendation back to the `executor` to add the test; the **manual** rows go to the
+user as a short checklist so nothing silently goes unchecked.
 
 ## Step 5a — confirm the basics (always)
 Suite green **and** build passes, using the repo's own commands (the executor should
@@ -168,6 +178,7 @@ the reviewer loop: **max 2 bounces here, and stop at 4 total executor re-entries
 across both loops.** Re-verify after the fix, then stop and report to the user,
 converged or not.
 
-Report tersely: the **test matrix with its PASS/FAIL column**, the run path taken,
-the break-it-red result, mutation findings, any unmet acceptance criteria, and the
-loop outcome.
+Report tersely: the **test matrix with its PASS/FAIL and automate/manual columns**,
+which **automate** rows are recommended for the executor to add, the manual checklist,
+the run path taken, the break-it-red result, mutation findings, any unmet acceptance
+criteria, and the loop outcome.
