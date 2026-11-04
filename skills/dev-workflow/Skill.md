@@ -1,6 +1,6 @@
 ---
 name: dev-workflow
-version: 1.4.2
+version: 1.4.3
 description: The order of work for any feature or bug fix in Acme code, backend or frontend. The main session ORCHESTRATES; the detail lives in role agents — planner (orient, grill, plan, contract), executor (tests, implement, verify, devtest), reviewer (guardrails + bounded fix loop). Use whenever the user asks to build, add, implement, change, or fix behaviour; not for small tasks (rename, typo, config tweak, one-line fix, docs), which start at step 3.
 allowed-tools: Read, Grep, Glob, Task, mcp__developer-portal__list_guidelines, mcp__developer-portal__search_best_practices, mcp__developer-portal__get_examples, mcp__developer-portal__validate_openapi_spec, mcp__developer-portal__search_knowledge_base
 when_to_use: Any feature or bug-fix request, in any language or layer. Small mechanical tasks skip steps 1 and 2 and start at step 3.
@@ -85,7 +85,9 @@ only when the change genuinely needs the deployed env. It drives a **headed** br
 with `playwright-cli`. It first **designs a black-box test matrix** from the plan —
 equivalence partitioning, boundary value analysis, state transition, decision table —
 marks each case **PASS/FAIL**, and flags which are worth **automating** (vs one-off
-manual checks) — uncovered automate-rows go to the executor, any FAIL loops back. For UI it checks **visual
+manual checks) — uncovered automate-rows go to the executor, any FAIL loops back. It
+reports back a **high-level summary of the scenarios it tested** (plain language)
+above the detailed matrix; relay that summary to the user. For UI it checks **visual
 fidelity to the Figma frame** (`figma` MCP screenshot + `odiff` image diff) and that
 **design tokens** are used (not hardcoded); for APIs it checks the **guidelines**
 (`developer-portal`). It does diff-scoped mutation testing + a mandatory

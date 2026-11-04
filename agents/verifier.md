@@ -178,7 +178,13 @@ the reviewer loop: **max 2 bounces here, and stop at 4 total executor re-entries
 across both loops.** Re-verify after the fix, then stop and report to the user,
 converged or not.
 
-Report tersely: the **test matrix with its PASS/FAIL and automate/manual columns**,
+Report tersely, **leading with a high-level summary of what you tested** — a few
+plain-language lines naming the scenarios you actually exercised and their verdict, so
+coverage is legible without reading every row, e.g.:
+> Tested: valid input → accepted ✓ · out-of-range value → rejected ✓ · empty/null →
+> handled ✓ · boundary at max → ✓ · state can't skip a step → blocked ✓
+
+Then the detail: the **test matrix with its PASS/FAIL and automate/manual columns**,
 which **automate** rows are recommended for the executor to add, the manual checklist,
 the run path taken, the break-it-red result, mutation findings, any unmet acceptance
 criteria, and the loop outcome.
