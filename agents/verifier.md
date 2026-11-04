@@ -23,6 +23,19 @@ the code looks right.
    pass.** A failure goes back to the `executor` with a report — you do not fix code.
 5. **Headed browser only.** Never launch a headless browser — the user watches the run.
 
+## Fail fast — cheapest check first, stop at the first red
+Don't spend an expensive stage to confirm what a cheap one already disproved. Run in
+increasing cost and **abort the moment a stage goes red** — hand that failure straight
+back to the executor without running the costlier stages:
+1. suite + build (5a) → 2. the focused matrix rows locally (5b cheap path) →
+3. the heavy run paths — mirrord/devtest, the SystemJS override, a full monolith run
+(5b) → 4. mutation testing (5c).
+Order the matrix so the highest-risk, cheapest rows go first, and stop at the first
+failing row — you already know the coverage from the designed matrix, so you don't
+need every row green to report a red. A green stage earns the next; a red stage ends
+the run. (Exception: a **cross-tenant leak** or other security failure is reported
+immediately on its own, never held behind other work.)
+
 ## Step 5-design — derive the test matrix FIRST (black-box, from the plan)
 Before you run anything, turn the plan's acceptance criteria into an explicit test
 matrix, using the technique that fits each input — **expected outcomes worked out
@@ -40,6 +53,10 @@ the matrix into the plan file; step 5b then executes every row and you mark it.
 - **Decision table** — when behaviour depends on a **combination** of conditions,
   enumerate the condition combinations → the expected action for each; collapse the
   impossible / don't-care rows. Catches the combination nobody coded for.
+
+- **Multi-tenant dimension** — when the change touches tenant-scoped data, add tenant
+  rows to the matrix: tenant A happy path, tenant B isolation (A can't see B), and
+  cross-tenant access denied. Treat the tenant as an EP/decision-table dimension.
 
 Apply only the techniques that fit the change — a pure-display tweak needs no state or
 decision rows; don't manufacture them. Each row is: **inputs / preconditions →
@@ -150,6 +167,23 @@ the user; if still none, do the token check and skip the image diff). Follow the
    `playwright-cli eval "getComputedStyle(el)…"`.
 5. **Chrome DevTools (optional):** `playwright-cli console` / `requests` to catch
    runtime errors or failed asset/API calls behind a visually-fine page.
+
+## Step 5b-tenant — tenant isolation (multi-tenant services)
+Our satellite services are multi-tenant with isolation enforced by the **database
+(RLS on `tenantId`)**. For any change that reads or writes tenant data, verifying one
+tenant is not enough:
+- **Exercise at least two tenants.** Seed/act as tenant A and tenant B, then confirm
+  A's calls return only A's rows — B's data never appears. A green single-tenant run
+  hides a broken `WHERE tenantId` or a missing RLS predicate.
+- **Cross-tenant access denied.** Request B's resource under A's context → expect
+  empty/403, never B's data. Try it by id, by list, and through any filter the change
+  touches.
+- **Tenant context propagates and the DB enforces it.** Confirm the request carries
+  the tenant (token claim / `SESSION_CONTEXT`) and the running query is actually
+  scoped — don't trust that app code filters; prove the RLS does. Depth →
+  `service-database-engineer`.
+A cross-tenant leak is a **security failure**: reported immediately, straight back to
+the executor, ahead of everything else (per fail-fast above).
 
 ## Step 5c — mutation testing + break-it-red (prove the tests bite)
 - **break-it-red (always, cheap, universal):** pick a changed function, inject one

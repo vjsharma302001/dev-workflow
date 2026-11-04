@@ -63,6 +63,13 @@ Write the plan from the agreed requirements (never from memory of the ask):
   Catalog holds API entities with their OpenAPI/AsyncAPI specs). Plan against the
   registered spec, not memory. (`developer-portal` = how to design; `backstage-catalog`
   = what already exists.)
+- **Multi-tenancy** — satellite services are multi-tenant with isolation enforced by
+  the database (RLS on `tenantId`). If the change touches tenant data, the contract
+  and test cases must cover tenant scoping: per-tenant isolation, **no cross-tenant
+  leakage**, tenant context carried in the API, and any per-tenant config / feature-
+  toggle behaviour. Make a **cross-tenant isolation** test case mandatory. Route the
+  persistence design to `service-database-engineer` (RLS, `SESSION_CONTEXT`, security
+  predicates).
 - **New dependency** is a decision: confirm it's **Adopt** on the Tech Radar and say so.
 
 The plan is the contract the executor runs on — unambiguous enough that a smaller
