@@ -84,6 +84,19 @@ for the verifier/reviewer loops to append to. The orchestrator hands this file's
 absolute path to the executor, verifier and reviewer; it is the single contract they
 all read. Local scratch — never checked in.
 
+## Task-scoped memory (ephemeral vs durable)
+Record context that must outlive a compaction or the session in project memory, tagged
+to the ticket so it can be cleaned up when the task closes. Two kinds:
+- **Ephemeral** (`metadata.task: <TICKET>`, `metadata.ephemeral: true`): status
+  snapshots, "what's done / what's next", a scratch finding. Throwaway — the
+  task-cleanup script removes these at task end.
+- **Durable** (`metadata.task: <TICKET>`, no `ephemeral`): a decision someone will ask
+  "why?" about later (a boundary, a non-obvious constraint). Kept past the ticket; it
+  survives cleanup unless `--all` is passed.
+Don't record what the repo/git/CLAUDE.md already says. At task end the orchestrator runs
+`scripts/task-cleanup.sh <TICKET>` — it **lists first** (mention before deleting) and
+removes only on `--delete` (see step 7 in the Skill.md).
+
 ## Acme skills for planning (phase rows — full index in `dev-workflow` Skill.md)
 | planning concern | skill |
 |---|---|
@@ -91,7 +104,7 @@ all read. Local scratch — never checked in.
 | test seams / what to test | `tdd` |
 | HTTP/async API, OpenAPI, contract design | **`developer-portal` MCP** (above) |
 | an existing/registered API spec (a service's published contract) | **`backstage-catalog`** MCP (Software Catalog) |
-| scale/load reality before designing | `kql-logs`, `azure-context`, `aks` |
+| scale/load reality, or diagnosing a bug before planning its fix | `debugging-playbook`, `kql-logs`, `azure-context`, `aks` |
 | ticket / branch context | `jira-workflow`, `pr-workflow` |
 | the *shape* of backend / frontend / DB / toggle / SQL work | the Skill.md routing index (`backend-engineer`, `frontend-design`, the db-engineers, `configcat`, `sql-query`, `create-react-micro-app`) |
 

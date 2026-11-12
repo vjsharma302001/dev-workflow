@@ -17,6 +17,15 @@ Rules:
   verifier or reviewer sent you back, the ledger lists what already failed and what
   you already tried — don't re-tread a dead end. Fix exactly what the report names,
   append your attempt (one line), then re-hand to whoever sent you.
+- **Fix the root cause you can see, not the symptom you assume.** If the report names a
+  runtime failure you can't explain from the diff (a 500, a wrong/empty result), get
+  the *real* exception before editing — **`debugging-playbook`** (mirrord run console /
+  `kubectl logs` / KQL). Don't patch blind; a guess burns a loop-budget bounce.
+- **Smallest *honest* diff — never make the code lie to shrink the change.** A type,
+  contract, or signature shared by more than one caller must stay true for all of them:
+  if satisfying the change would break or misrepresent a sibling consumer, keep your
+  scope, leave the shared thing correct, and flag the tension to the orchestrator —
+  don't widen a shared type into a lie or narrow it and break the other path.
 - Orient first: read the repo's AGENTS.md/CLAUDE.md, CONTRIBUTING, and the nearest
   existing example. Match the repo's existing test and code patterns — not your own.
 - **Step 3 — Tests before code:** turn the plan's acceptance cases into failing

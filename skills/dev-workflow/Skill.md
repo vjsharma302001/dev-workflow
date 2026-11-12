@@ -1,6 +1,6 @@
 ---
 name: dev-workflow
-version: 1.5.0
+version: 1.7.0
 description: The order of work for any feature or bug fix in Acme code, backend or frontend. The main session ORCHESTRATES; the detail lives in role agents — planner (orient, grill, plan, contract), executor (tests, implement, verify, devtest), reviewer (guardrails + bounded fix loop). Use whenever the user asks to build, add, implement, change, or fix behaviour; not for small tasks (rename, typo, config tweak, one-line fix, docs), which start at step 3.
 allowed-tools: Read, Grep, Glob, Task, mcp__developer-portal__list_guidelines, mcp__developer-portal__search_best_practices, mcp__developer-portal__get_examples, mcp__developer-portal__validate_openapi_spec, mcp__developer-portal__search_knowledge_base
 when_to_use: Any feature or bug-fix request, in any language or layer. Small mechanical tasks skip steps 1 and 2 and start at step 3.
@@ -47,6 +47,7 @@ design — as a *suggestion*, never auto-invoked.
 | 4 | **Implement** | `executor` | executor confirms suite + build green, then hands off |
 | 5 | **Verify by running it** — real run, mutation, break-it-red | `verifier` | fresh run-it agent; mirrord/devtest, local-CDN override, monolith, API curl; loops failures back to `executor` (max 2) |
 | 6 | **Document + review** (guardrails, bounded loop) | `reviewer` | fresh eyes, review model ≠ implementer |
+| 7 | **Clean up** (task memory + plan) | orchestrator | run `task-cleanup.sh`; mention before deleting |
 
 Delegate only independent, well-scoped work; a design still in flux stays in this
 session. Say when you delegate, to which agent, and on which model. A step you
@@ -95,8 +96,13 @@ it writes the contract and test cases. For UI it checks **visual
 fidelity to the Figma frame** (`figma` MCP screenshot + `odiff` image diff) and that
 **design tokens** are used (not hardcoded); for APIs it checks the **guidelines**
 (`developer-portal`). It does diff-scoped mutation testing + a mandatory
-**break-it-red**, and hands failures back to the `executor` (max 2). Three laws it
-enforces, true for the whole workflow:
+**break-it-red**, and hands failures back to the `executor` (max 2). **When the loop
+completes** (converged, or stopped at budget) it dumps a self-contained **HTML report**
+of what it tested — the summary, the PASS/FAIL matrix, run path, break-it-red, mutation,
+tenant and unmet criteria — to `.scratch/dev-workflow/verify-report-<ticket>.html` via
+`scripts/verify-report.sh`; relay its path and offer to open it (`Artifact` publish) or
+attach it to the PR. It survives `task-cleanup` — it's a deliverable, not scratch to bin.
+Three laws it enforces, true for the whole workflow:
 - **Work out the expected answer from the requirements, never from the code.**
 - **Before calling it done, break the code and watch a test go red.**
 - **Never weaken, skip, or disable a test to make it pass** — fix the code.
@@ -110,6 +116,31 @@ Reviewer runs `scripts/review-metrics.sh` (deterministic: build/tests/lint/osv-s
   weakening tests, or raising thresholds).
 - **Advisory** (`ponytail-review`, structural duplication hint) and **decisions for
   the user** (ADR-worthy choices) never loop — they go to the user.
+
+## Diagnosing a runtime failure (any step)
+When something fails *while running* — a 500, a wrong/empty result, a flow that only
+breaks in the deployed env — don't re-read the code and guess. Get the **real** error
+first (the stack trace, the rejected query) from the right log source: under mirrord
+steal it's your **own run console**; on a deployed pod it's `kubectl logs` (`aks`); for
+a past/prod event it's KQL/App Insights (`kql-logs`). The **`debugging-playbook`** skill
+is the symptom→source→command tree. A generic error body is not a diagnosis; the
+verifier must find the cause before bouncing a red run to the executor, and the executor
+must reproduce from logs before fixing blind.
+
+## Task-scoped memory + clean-up (step 7)
+Durable task context goes in project memory **tagged to the ticket** (`metadata.task:
+<TICKET>`): `ephemeral: true` for throwaway status/scratch notes, no flag for a decision
+worth keeping past the ticket (the planner owns this — see `planner.md`). The **plan
+file** is already local scratch. At task end, run:
+
+```bash
+bash ~/.claude/skills/dev-workflow/scripts/task-cleanup.sh <TICKET>            # lists what it would remove
+bash ~/.claude/skills/dev-workflow/scripts/task-cleanup.sh <TICKET> --delete   # removes ephemeral memories + plan, prunes MEMORY.md
+```
+
+It is **dry-run by default** — it always lists first (mention before deleting) and only
+removes with `--delete`; durable task memories are kept unless `--all`. **Mention the
+list to the user and get a go before `--delete`** — never delete memory silently.
 
 ## Parallelism
 Parallelise **orientation** (Explore agents), **review dimensions**
@@ -146,6 +177,7 @@ enabled (`claude plugin enable org@org`).
 | Kubernetes / AKS / a deployed env | `aks` |
 | Azure resources | `azure-context` |
 | logs and telemetry | `kql-logs` |
+| diagnosing a runtime failure (500 / wrong result / deployed-only) from logs | `debugging-playbook` (ties together mirrord console, `aks` kubectl logs, `kql-logs`, `sql-query`) |
 | ticket / branch / PR | `jira-workflow`, `pr-workflow` |
 | merge conflict mid-task | `resolving-merge-conflicts` |
 

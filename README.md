@@ -13,7 +13,7 @@ Cheap execution is only safe behind a smart, independent review. So the work is 
 | Orient · grill · plan · contract | `planner` | strongest | steps 0–2, writes the frozen plan |
 | Tests-first · implement | `executor` | mid | steps 3–4 |
 | Mechanical slices | `grunt` | cheapest | bulk renames, boilerplate |
-| Verify by running it | `verifier` | mid | step 5 — proves it against reality |
+| Verify by running it | `verifier` | mid | step 5 — proves it against reality, dumps an HTML report |
 | Review guardrails | `reviewer` | strongest, ≠ implementer | step 6 |
 
 ## What makes it tick
@@ -24,19 +24,22 @@ Cheap execution is only safe behind a smart, independent review. So the work is 
 - **Bounded, anti-gaming fix loops.** Verifier→executor and reviewer→executor share one budget (max 2 per loop, 4 total) via a `## Fix attempts` ledger; a gate must be made green by fixing the code, not by defeating the check.
 - **Deterministic-first.** `review-metrics.sh` runs build/tests/lint + an OSV dependency scan + a structural-duplication hint and emits a compact pass/fail table — the model reads the table, not raw tool output.
 - **Fast path.** A trivial change touching no trust boundary skips the fan-out — executor only (change + suite + break-it-red).
+- **Verifier dumps an HTML report** when the loop completes — the test matrix (PASS/FAIL), run path, break-it-red, mutation, tenant isolation and any unmet criteria — via `scripts/verify-report.sh` (deterministic, zero model tokens). A deliverable to attach to the PR; the cleanup step leaves it alone.
+- **Debugging playbook.** A symptom→source→command tree (local run console / `kubectl logs` / log-analytics / SQL) the verifier and executor consult to get the *real* exception before bouncing or re-guessing a runtime failure, instead of re-reading the code.
+- **Task-scoped memory + cleanup.** Durable task notes are tagged to the ticket; `scripts/task-cleanup.sh` lists them and the plan file, and removes only the throwaway (`ephemeral`) ones on `--delete` — it always lists first, so nothing is deleted silently.
 
 ## Install
 
 Copy into your Claude Code config:
 
 ```sh
-cp -r skills/dev-workflow ~/.claude/skills/
+cp -r skills/dev-workflow skills/debugging-playbook ~/.claude/skills/
 cp agents/*.md ~/.claude/agents/
-chmod +x ~/.claude/skills/dev-workflow/scripts/review-metrics.sh
+chmod +x ~/.claude/skills/dev-workflow/scripts/*.sh
 ```
 
 Then adapt the placeholders (`org:`, `example.com`, `${DEVTEST_*}`) and the skill-routing tables to your own skills and environment.
 
 ## Requirements (optional, for the full machine)
 
-`ast-grep`, `osv-scanner` for `review-metrics.sh`; `playwright-cli`, `odiff` for the verifier's run/visual paths. Each is a shortcut, not a prerequisite — if a tool is absent the step degrades gracefully.
+`ast-grep`, `osv-scanner` for `review-metrics.sh`; `playwright-cli`, `odiff` for the verifier's run/visual paths; `python3` (stdlib only) for `verify-report.sh`. Each is a shortcut, not a prerequisite — if a tool is absent the step degrades gracefully.
